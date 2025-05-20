@@ -31,6 +31,7 @@ use iota_types::{
     balance::Supply,
     base_types::{IotaAddress, ObjectID, SequenceNumber, VersionNumber},
     coin::{CoinMetadata, TreasuryCap},
+    coin_manager::CoinManager,
     committee::EpochId,
     digests::{ChainIdentifier, TransactionDigest},
     dynamic_field::{DynamicFieldInfo, DynamicFieldName, visitor as DFV},
@@ -824,6 +825,28 @@ impl IndexerReader {
             if let Some(object_cursor) = cursor {
                 query = query.filter(objects::dsl::object_id.gt(object_cursor.to_vec()));
             }
+
+            query
+                .load::<StoredObject>(conn)
+                .map_err(|e| IndexerError::PostgresRead(e.to_string()))
+        })
+    }
+
+    fn get_objects_by_exact_type(
+        &self,
+        struct_tag: StructTag,
+        limit: usize,
+    ) -> Result<Vec<StoredObject>, IndexerError> {
+        let object_type = struct_tag.to_canonical_string(/* with_prefix */ true);
+
+        run_query!(&self.pool, |conn| {
+            // TODO: make sure it hits the index
+            let query = objects::dsl::objects
+                .filter(objects::object_type_package.eq(struct_tag.address.to_vec()))
+                .filter(objects::object_type_module.eq(struct_tag.module.to_string()))
+                .filter(objects::object_type_name.eq(struct_tag.name.to_string()))
+                .filter(objects::object_type.eq(object_type))
+                .limit(limit as i64);
 
             query
                 .load::<StoredObject>(conn)
@@ -1967,8 +1990,8 @@ impl IndexerReader {
         coin_struct: StructTag,
     ) -> Result<Option<IotaCoinMetadata>, IndexerError> {
         let package_id = coin_struct.address.into();
-        let coin_metadata_type =
-            CoinMetadata::type_(coin_struct).to_canonical_string(/* with_prefix */ true);
+        let coin_metadata_type = CoinMetadata::type_(coin_struct.clone())
+            .to_canonical_string(/* with_prefix */ true);
         let coin_metadata_obj_id = *self
             .package_obj_type_cache
             .lock()
@@ -1981,7 +2004,51 @@ impl IndexerReader {
             let metadata_object = self.get_object(&id, None)?;
             Ok(metadata_object.and_then(|v| IotaCoinMetadata::try_from(v).ok()))
         } else {
-            Ok(None)
+            let coin_manager_obj = self.get_coin_manager_obj(coin_struct)?;
+            Ok(
+                coin_manager_obj.and_then(|m| match (m.metadata, m.immutable_metadata) {
+                    (Some(metadata), _) => Some(metadata.into()),
+                    (_, Some(immutable_metadata)) => Some(IotaCoinMetadata {
+                        decimals: immutable_metadata.decimals,
+                        name: immutable_metadata.name,
+                        symbol: immutable_metadata.symbol,
+                        description: immutable_metadata.description,
+                        icon_url: immutable_metadata.icon_url,
+                        id: None,
+                    }),
+                    (None, None) => None,
+                }),
+            )
+        }
+    }
+
+    fn get_coin_manager_obj(
+        &self,
+        coin_type: StructTag,
+    ) -> Result<Option<CoinManager>, IndexerError> {
+        let coin_manager_type = CoinManager::type_(coin_type);
+        let coin_manager_type_string =
+            coin_manager_type.to_canonical_string(/* with_prefix */ true);
+        let coin_manager_obj_id = *self
+            .package_obj_type_cache
+            .lock()
+            .unwrap()
+            .cache_get_or_set_with(coin_manager_type_string.clone(), || {
+                self.get_objects_by_exact_type(coin_manager_type, 1)
+                    .expect("Get objects query should succeed")
+                    .pop()
+                    .map(|obj| {
+                        obj.get_object_ref()
+                            .expect("Object data from DB should be valid")
+                            .0
+                    })
+            });
+
+        match coin_manager_obj_id {
+            Some(coin_manager_obj_id) => Ok(self
+                .get_object(&coin_manager_obj_id, None)?
+                .and_then(|v| CoinManager::try_from(v).ok())),
+            None => Ok(None),
         }
     }
 
