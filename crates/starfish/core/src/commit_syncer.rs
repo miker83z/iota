@@ -848,6 +848,7 @@ mod tests {
         network::{BlockStream, NetworkClient},
         storage::mem_store::MemStore,
     };
+    use crate::network::BlockBundleStream;
 
     #[derive(Default)]
     struct FakeNetworkClient {}
@@ -860,6 +861,15 @@ mod tests {
             _last_received: Round,
             _timeout: Duration,
         ) -> ConsensusResult<BlockStream> {
+            unimplemented!("Unimplemented")
+        }
+
+        async fn subscribe_block_bundles(
+            &self,
+            peer: AuthorityIndex,
+            last_received: Round,
+            timeout: Duration,
+        ) -> ConsensusResult<BlockBundleStream> {
             unimplemented!("Unimplemented")
         }
 

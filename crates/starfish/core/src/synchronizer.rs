@@ -1194,6 +1194,7 @@ mod tests {
             MAX_BLOCKS_PER_FETCH, SYNC_MISSING_BLOCK_ROUND_THRESHOLD, Synchronizer,
         },
     };
+    use crate::network::BlockBundleStream;
 
     type FetchRequestKey = (Vec<BlockRef>, AuthorityIndex);
     type FetchRequestHeadersResponse = (Vec<VerifiedBlockHeader>, Option<Duration>);
@@ -1251,6 +1252,15 @@ mod tests {
             _last_received: Round,
             _timeout: Duration,
         ) -> ConsensusResult<BlockStream> {
+            unimplemented!("Unimplemented")
+        }
+
+        async fn subscribe_block_bundles(
+            &self,
+            peer: AuthorityIndex,
+            last_received: Round,
+            timeout: Duration,
+        ) -> ConsensusResult<BlockBundleStream> {
             unimplemented!("Unimplemented")
         }
 

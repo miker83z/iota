@@ -245,6 +245,7 @@ mod test {
         },
         storage::mem_store::MemStore,
     };
+    use crate::network::BlockBundleStream;
 
     struct SubscriberTestClient {}
 
@@ -274,6 +275,15 @@ mod test {
             })
             .take(10);
             Ok(Box::pin(block_stream))
+        }
+
+        async fn subscribe_block_bundles(
+            &self,
+            peer: AuthorityIndex,
+            last_received: Round,
+            timeout: Duration,
+        ) -> ConsensusResult<BlockBundleStream> {
+            unimplemented!("Unimplemented")
         }
 
         async fn fetch_blocks(
