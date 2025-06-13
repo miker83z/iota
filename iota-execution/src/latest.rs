@@ -104,6 +104,46 @@ impl executor::Executor for Executor {
         )
     }
 
+    fn execute_view_transaction(
+        &self,
+        store: &dyn BackingStore,
+        protocol_config: &ProtocolConfig,
+        metrics: Arc<LimitsMetrics>,
+        enable_expensive_checks: bool,
+        certificate_deny_set: &HashSet<TransactionDigest>,
+        epoch_id: &EpochId,
+        epoch_timestamp_ms: u64,
+        input_objects: CheckedInputObjects,
+        gas_coins: Vec<ObjectRef>,
+        gas_status: IotaGasStatus,
+        transaction_kind: TransactionKind,
+        transaction_signer: IotaAddress,
+        transaction_digest: TransactionDigest,
+    ) -> (
+        InnerTemporaryStore,
+        IotaGasStatus,
+        TransactionEffects,
+        Result<Vec<ExecutionResult>, ExecutionError>,
+    ) {
+        execute_transaction_to_effects::<execution_mode::View>(
+            store,
+            input_objects,
+            gas_coins,
+            gas_status,
+            transaction_kind,
+            transaction_signer,
+            transaction_digest,
+            &self.0,
+            epoch_id,
+            epoch_timestamp_ms,
+            protocol_config,
+            metrics,
+            enable_expensive_checks,
+            certificate_deny_set,
+            &mut None,
+        )
+    }
+
     fn dev_inspect_transaction(
         &self,
         store: &dyn BackingStore,

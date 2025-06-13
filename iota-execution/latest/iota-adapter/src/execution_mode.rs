@@ -31,6 +31,9 @@ pub trait ExecutionMode {
     /// Do not perform conservation checks after execution.
     fn skip_conservation_checks() -> bool;
 
+    /// Do not perform view transaction checks before execution.
+    fn skip_view_checks() -> bool;
+
     /// If not set, the package ID should be calculated like an object and an
     /// UpgradeCap is produced
     fn packages_are_predefined() -> bool;
@@ -73,6 +76,10 @@ impl ExecutionMode for Normal {
         false
     }
 
+    fn skip_view_checks() -> bool {
+        true
+    }
+
     fn packages_are_predefined() -> bool {
         false
     }
@@ -80,6 +87,58 @@ impl ExecutionMode for Normal {
     fn empty_arguments() -> Self::ArgumentUpdates {}
 
     fn empty_results() -> Self::ExecutionResults {}
+
+    fn add_argument_update(
+        _resolver: &impl TypeTagResolver,
+        _acc: &mut Self::ArgumentUpdates,
+        _arg: Argument,
+        _new_value: &Value,
+    ) -> Result<(), ExecutionError> {
+        Ok(())
+    }
+
+    fn finish_command(
+        _resolver: &impl TypeTagResolver,
+        _acc: &mut Self::ExecutionResults,
+        _argument_updates: Self::ArgumentUpdates,
+        _command_result: &[Value],
+    ) -> Result<(), ExecutionError> {
+        Ok(())
+    }
+}
+
+#[derive(Copy, Clone)]
+pub struct View;
+
+impl ExecutionMode for View {
+    type ArgumentUpdates = ();
+    type ExecutionResults = Vec<ExecutionResult>;
+
+    fn allow_arbitrary_function_calls() -> bool {
+        false
+    }
+
+    fn allow_arbitrary_values() -> bool {
+        false
+    }
+
+    fn skip_conservation_checks() -> bool {
+        false
+    }
+
+    fn skip_view_checks() -> bool {
+        false
+    }
+
+    fn packages_are_predefined() -> bool {
+        false
+    }
+
+    fn empty_arguments() -> Self::ArgumentUpdates {}
+
+    fn empty_results() -> Self::ExecutionResults {
+        vec![]
+    }
 
     fn add_argument_update(
         _resolver: &impl TypeTagResolver,
@@ -121,6 +180,10 @@ impl ExecutionMode for Genesis {
 
     fn skip_conservation_checks() -> bool {
         false
+    }
+
+    fn skip_view_checks() -> bool {
+        true
     }
 
     fn empty_arguments() -> Self::ArgumentUpdates {}
@@ -171,6 +234,10 @@ impl ExecutionMode for System {
         false
     }
 
+    fn skip_view_checks() -> bool {
+        true
+    }
+
     fn packages_are_predefined() -> bool {
         true
     }
@@ -217,6 +284,10 @@ impl<const SKIP_ALL_CHECKS: bool> ExecutionMode for DevInspect<SKIP_ALL_CHECKS> 
 
     fn skip_conservation_checks() -> bool {
         SKIP_ALL_CHECKS
+    }
+
+    fn skip_view_checks() -> bool {
+        true
     }
 
     fn packages_are_predefined() -> bool {

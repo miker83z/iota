@@ -100,6 +100,47 @@ mod checked {
             gas_charger,
             inputs,
         )?;
+        // If View Transaction then check that the view transaction conditions
+        if !Mode::skip_view_checks() {
+            commands.last().expect("should have at least one command");
+            match commands
+                .last()
+                .expect("should have at least one command")
+                .clone()
+            {
+                Command::MoveCall(move_call) => {
+                    let ProgrammableMoveCall {
+                        package,
+                        module,
+                        function,
+                        type_arguments,
+                        arguments: _,
+                    } = *move_call;
+                    // Convert type arguments to `Type`s
+                    let mut loaded_type_arguments = Vec::with_capacity(type_arguments.len());
+                    for (ix, type_arg) in type_arguments.into_iter().enumerate() {
+                        let ty = context
+                            .load_type(&type_arg)
+                            .map_err(|e| context.convert_type_argument_error(ix, e))?;
+                        loaded_type_arguments.push(ty);
+                    }
+                    let runtime_id = ModuleId::new(context.set_link_context(package)?, module);
+
+                    check_view_conditions::<Mode>(
+                        &mut context,
+                        &runtime_id,
+                        &function,
+                        &loaded_type_arguments,
+                    )?
+                }
+                _ => {
+                    return Err(ExecutionError::new_with_source(
+                        ExecutionErrorKind::FunctionNotFound,
+                        format!("Could not find move call as last command"),
+                    ));
+                }
+            }
+        };
         // execute commands
         let mut mode_results = Mode::empty_results();
         for (idx, command) in commands.into_iter().enumerate() {
@@ -1041,6 +1082,61 @@ mod checked {
         /// The length of the function used for setting error information, or 0
         /// if native
         last_instr: CodeOffset,
+    }
+
+    /// Checks that the function to be called is either
+    /// - an entry function
+    /// - a public function that does not return references
+    /// - module init (only internal usage)
+    fn check_view_conditions<Mode: ExecutionMode>(
+        context: &mut ExecutionContext<'_, '_, '_>,
+        module_id: &ModuleId,
+        function: &IdentStr,
+        type_arguments: &[Type],
+    ) -> Result<(), ExecutionError> {
+        let no_new_packages = vec![];
+        let data_store = IotaDataStore::new(&context.linkage_view, &no_new_packages);
+        let module = context
+            .vm
+            .get_runtime()
+            .load_module(module_id, &data_store)
+            .map_err(|e| context.convert_vm_error(e))?;
+        let Some(_) = module
+            .function_defs
+            .iter()
+            .enumerate()
+            .find(|(_index, fdef)| {
+                module.identifier_at(module.function_handle_at(fdef.function).name) == function
+            })
+        else {
+            return Err(ExecutionError::new_with_source(
+                ExecutionErrorKind::FunctionNotFound,
+                format!(
+                    "Could not resolve function '{}' in module {}",
+                    function, &module_id,
+                ),
+            ));
+        };
+
+        let signature = context
+            .load_function(module_id, function, type_arguments)
+            .map_err(|e| context.convert_vm_error(e))?;
+        let signature =
+            subst_signature(signature, type_arguments).map_err(|e| context.convert_vm_error(e))?;
+        let return_value_kinds =
+            check_non_entry_signature::<Mode>(context, module_id, function, &signature)?;
+
+        if return_value_kinds.len() > 0 {
+            Ok(())
+        } else {
+            Err(ExecutionError::new_with_source(
+                ExecutionErrorKind::FunctionNotFound,
+                format!(
+                    "Could not resolve function '{}' in module {}",
+                    function, &module_id,
+                ),
+            ))
+        }
     }
 
     /// Checks that the function to be called is either

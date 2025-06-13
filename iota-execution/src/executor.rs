@@ -51,6 +51,33 @@ pub trait Executor {
         Result<(), ExecutionError>,
     );
 
+    fn execute_view_transaction(
+        &self,
+        store: &dyn BackingStore,
+        // Configuration
+        protocol_config: &ProtocolConfig,
+        metrics: Arc<LimitsMetrics>,
+        enable_expensive_checks: bool,
+        certificate_deny_set: &HashSet<TransactionDigest>,
+        // Epoch
+        epoch_id: &EpochId,
+        epoch_timestamp_ms: u64,
+        // Transaction Inputs
+        input_objects: CheckedInputObjects,
+        // Gas related
+        gas_coins: Vec<ObjectRef>,
+        gas_status: IotaGasStatus,
+        // Transaction
+        transaction_kind: TransactionKind,
+        transaction_signer: IotaAddress,
+        transaction_digest: TransactionDigest,
+    ) -> (
+        InnerTemporaryStore,
+        IotaGasStatus,
+        TransactionEffects,
+        Result<Vec<ExecutionResult>, ExecutionError>,
+    );
+
     fn dev_inspect_transaction(
         &self,
         store: &dyn BackingStore,

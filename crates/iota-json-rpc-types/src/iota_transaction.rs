@@ -1300,6 +1300,51 @@ impl DevInspectResults {
     }
 }
 
+/// The response from processing a view transaction transaction
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename = "ViewTransactionResults", rename_all = "camelCase")]
+pub struct ViewTransactionResults {
+    /// Execution results (including return values) from executing the
+    /// transactions
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub results: Option<Vec<IotaExecutionResult>>,
+    /// Execution error from executing the transactions
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+impl ViewTransactionResults {
+    pub fn new(return_values: Result<Vec<ExecutionResult>, ExecutionError>) -> IotaResult<Self> {
+        let mut error = None;
+        let mut results = None;
+        match return_values {
+            Err(e) => error = Some(e.to_string()),
+            Ok(srvs) => {
+                results = Some(
+                    srvs.into_iter()
+                        .map(|srv| {
+                            let (mutable_reference_outputs, return_values) = srv;
+                            let mutable_reference_outputs = mutable_reference_outputs
+                                .into_iter()
+                                .map(|(a, bytes, tag)| (a.into(), bytes, IotaTypeTag::from(tag)))
+                                .collect();
+                            let return_values = return_values
+                                .into_iter()
+                                .map(|(bytes, tag)| (bytes, IotaTypeTag::from(tag)))
+                                .collect();
+                            IotaExecutionResult {
+                                mutable_reference_outputs,
+                                return_values,
+                            }
+                        })
+                        .collect(),
+                )
+            }
+        };
+        Ok(Self { results, error })
+    }
+}
+
 #[derive(Eq, PartialEq, Clone, Debug, Serialize, Deserialize, JsonSchema)]
 pub enum IotaTransactionBlockBuilderMode {
     /// Regular IOTA Transactions that are committed on chain
