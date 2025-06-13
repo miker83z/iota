@@ -1,5 +1,11 @@
 # @iota/iota-sdk
 
+## 1.2.1
+
+### Patch Changes
+
+-   c4c6d9a: Export `getGraphQLUrl` correctly
+
 ## 1.2.0
 
 ### Minor Changes
