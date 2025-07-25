@@ -451,6 +451,8 @@ pub(super) fn create_migration_context(
         &IotaAddress::default(),
         &target_network.migration_transaction_digest(coin_type),
         &EpochData::new_genesis(0),
+        1,
+        None,
     )
 }
 

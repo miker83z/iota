@@ -427,6 +427,8 @@ fn unlock_object(
         sender,
         &TransactionDigest::new(random()),
         &EpochData::new(0, epoch_start_timestamp_ms, Default::default()),
+        1,
+        None,
     );
     let store = InMemoryStorage::new(
         // Cloning all objects in the store includes the system packages we need for executing

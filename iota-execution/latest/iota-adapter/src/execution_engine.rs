@@ -25,9 +25,7 @@ mod checked {
             BALANCE_CREATE_REWARDS_FUNCTION_NAME, BALANCE_DESTROY_REBATES_FUNCTION_NAME,
             BALANCE_MODULE_NAME,
         },
-        base_types::{
-            IotaAddress, ObjectID, ObjectRef, SequenceNumber, TransactionDigest, TxContext,
-        },
+        base_types::{IotaAddress, ObjectID, SequenceNumber, TransactionDigest, TxContext},
         clock::{CLOCK_MODULE_NAME, CONSENSUS_COMMIT_PROLOGUE_FUNCTION_NAME},
         committee::EpochId,
         effects::TransactionEffects,
@@ -49,7 +47,7 @@ mod checked {
         storage::{BackingStore, Storage},
         transaction::{
             Argument, AuthenticatorStateExpire, AuthenticatorStateUpdateV1, CallArg, ChangeEpoch,
-            ChangeEpochV2, CheckedInputObjects, Command, EndOfEpochTransactionKind,
+            ChangeEpochV2, CheckedInputObjects, Command, EndOfEpochTransactionKind, GasData,
             GenesisTransaction, ObjectArg, ProgrammableTransaction, RandomnessStateUpdate,
             TransactionKind,
         },
@@ -83,7 +81,7 @@ mod checked {
     pub fn execute_transaction_to_effects<Mode: ExecutionMode>(
         store: &dyn BackingStore,
         input_objects: CheckedInputObjects,
-        gas_coins: Vec<ObjectRef>,
+        gas_data: GasData,
         gas_status: IotaGasStatus,
         transaction_kind: TransactionKind,
         transaction_signer: IotaAddress,
@@ -123,14 +121,29 @@ mod checked {
             *epoch_id,
         );
 
-        let mut gas_charger =
-            GasCharger::new(transaction_digest, gas_coins, gas_status, protocol_config);
+        let sponsor = {
+            let gas_owner = gas_data.owner;
+            if gas_owner == transaction_signer {
+                None
+            } else {
+                Some(gas_owner)
+            }
+        };
+        let gas_price = gas_status.gas_price();
+        let mut gas_charger = GasCharger::new(
+            transaction_digest,
+            gas_data.payment,
+            gas_status,
+            protocol_config,
+        );
 
         let mut tx_ctx = TxContext::new_from_components(
             &transaction_signer,
             &transaction_digest,
             epoch_id,
             epoch_timestamp_ms,
+            gas_price,
+            sponsor,
         );
 
         let is_epoch_change = transaction_kind.is_end_of_epoch_tx();

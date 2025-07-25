@@ -1039,6 +1039,8 @@ fn create_genesis_context(
         &IotaAddress::default(),
         &genesis_transaction_digest,
         epoch_data,
+        1,
+        None,
     )
 }
 

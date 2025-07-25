@@ -13,7 +13,7 @@ use iota_adapter_latest::{
 use iota_move_natives_latest::all_natives;
 use iota_protocol_config::ProtocolConfig;
 use iota_types::{
-    base_types::{IotaAddress, ObjectRef, TxContext},
+    base_types::{IotaAddress, TxContext},
     committee::EpochId,
     digests::TransactionDigest,
     effects::TransactionEffects,
@@ -24,7 +24,7 @@ use iota_types::{
     layout_resolver::LayoutResolver,
     metrics::{BytecodeVerifierMetrics, LimitsMetrics},
     storage::BackingStore,
-    transaction::{CheckedInputObjects, ProgrammableTransaction, TransactionKind},
+    transaction::{CheckedInputObjects, GasData, ProgrammableTransaction, TransactionKind},
 };
 use iota_verifier_latest::meter::IotaVerifierMeter;
 use move_binary_format::CompiledModule;
@@ -73,7 +73,7 @@ impl executor::Executor for Executor {
         epoch_id: &EpochId,
         epoch_timestamp_ms: u64,
         input_objects: CheckedInputObjects,
-        gas_coins: Vec<ObjectRef>,
+        gas: GasData,
         gas_status: IotaGasStatus,
         transaction_kind: TransactionKind,
         transaction_signer: IotaAddress,
@@ -88,7 +88,7 @@ impl executor::Executor for Executor {
         execute_transaction_to_effects::<execution_mode::Normal>(
             store,
             input_objects,
-            gas_coins,
+            gas,
             gas_status,
             transaction_kind,
             transaction_signer,
@@ -114,7 +114,7 @@ impl executor::Executor for Executor {
         epoch_id: &EpochId,
         epoch_timestamp_ms: u64,
         input_objects: CheckedInputObjects,
-        gas_coins: Vec<ObjectRef>,
+        gas: GasData,
         gas_status: IotaGasStatus,
         transaction_kind: TransactionKind,
         transaction_signer: IotaAddress,
@@ -130,7 +130,7 @@ impl executor::Executor for Executor {
             execute_transaction_to_effects::<execution_mode::DevInspect<true>>(
                 store,
                 input_objects,
-                gas_coins,
+                gas,
                 gas_status,
                 transaction_kind,
                 transaction_signer,
@@ -148,7 +148,7 @@ impl executor::Executor for Executor {
             execute_transaction_to_effects::<execution_mode::DevInspect<false>>(
                 store,
                 input_objects,
-                gas_coins,
+                gas,
                 gas_status,
                 transaction_kind,
                 transaction_signer,
