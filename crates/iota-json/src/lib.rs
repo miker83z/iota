@@ -15,13 +15,14 @@ use iota_types::{
     base_types::{
         IotaAddress, ObjectID, RESOLVED_ASCII_STR, RESOLVED_STD_OPTION, RESOLVED_UTF8_STR,
         STD_ASCII_MODULE_NAME, STD_ASCII_STRUCT_NAME, STD_OPTION_MODULE_NAME,
-        STD_OPTION_STRUCT_NAME, STD_UTF8_MODULE_NAME, STD_UTF8_STRUCT_NAME, TxContext,
-        TxContextKind, is_primitive_type_tag, move_ascii_str_layout, move_utf8_str_layout,
+        STD_OPTION_STRUCT_NAME, STD_UTF8_MODULE_NAME, STD_UTF8_STRUCT_NAME, is_primitive_type_tag,
+        move_ascii_str_layout, move_utf8_str_layout,
     },
     id::{self, ID, RESOLVED_IOTA_ID},
     move_package::MovePackage,
     object::bounded_visitor::BoundedVisitor,
     transfer::RESOLVED_RECEIVING_STRUCT,
+    tx_context::{TxContext, TxContextKind},
 };
 use move_binary_format::{
     CompiledModule, binary_config::BinaryConfig, file_format::SignatureToken,
