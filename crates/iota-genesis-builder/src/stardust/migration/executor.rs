@@ -21,7 +21,7 @@ use iota_sdk::types::block::output::{
 use iota_types::{
     IOTA_FRAMEWORK_PACKAGE_ID, STARDUST_PACKAGE_ID, TypeTag,
     balance::Balance,
-    base_types::{IotaAddress, ObjectID, ObjectRef, SequenceNumber, TxContext},
+    base_types::{IotaAddress, ObjectID, ObjectRef, SequenceNumber},
     coin_manager::{CoinManager, CoinManagerTreasuryCap},
     collection_types::Bag,
     dynamic_field::Field,
@@ -41,6 +41,7 @@ use iota_types::{
         Argument, CheckedInputObjects, Command, InputObjectKind, InputObjects, ObjectArg,
         ObjectReadResult, ProgrammableTransaction,
     },
+    tx_context::{TxContext, TxContextAPI},
 };
 use move_core_types::{ident_str, language_storage::StructTag};
 use move_vm_runtime_latest::move_vm::MoveVM;

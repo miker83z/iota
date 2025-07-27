@@ -16,11 +16,12 @@ use iota_sdk::types::block::output::{FoundryOutput, Output, OutputId};
 use iota_types::{
     IOTA_FRAMEWORK_PACKAGE_ID, IOTA_SYSTEM_PACKAGE_ID, MOVE_STDLIB_PACKAGE_ID, STARDUST_PACKAGE_ID,
     balance::Balance,
-    base_types::{IotaAddress, ObjectID, TxContext},
+    base_types::{IotaAddress, ObjectID},
     epoch_data::EpochData,
     object::Object,
     stardust::coin_type::CoinType,
     timelock::timelock::{self, TimeLock, is_timelocked_balance},
+    tx_context::TxContext,
 };
 use move_binary_format::file_format_common::VERSION_MAX;
 use tracing::info;
@@ -447,12 +448,12 @@ pub(super) fn create_migration_context(
     coin_type: &CoinType,
     target_network: MigrationTargetNetwork,
 ) -> TxContext {
-    TxContext::new(
+    let epoch = &EpochData::new_genesis(0);
+    TxContext::new_v1(
         &IotaAddress::default(),
         &target_network.migration_transaction_digest(coin_type),
-        &EpochData::new_genesis(0),
-        1,
-        None,
+        &epoch.epoch_id(),
+        epoch.epoch_start_timestamp(),
     )
 }
 
@@ -466,6 +467,7 @@ mod tests {
         id::UID,
         object::{Data, Owner},
         timelock::timelock::{TimeLock, to_genesis_object},
+        tx_context::TxContextAPI,
     };
 
     use super::*;
@@ -474,7 +476,7 @@ mod tests {
     fn migration_objects_get_timelocks() {
         let owner = IotaAddress::random_for_testing_only();
         let address = IotaAddress::random_for_testing_only();
-        let tx_context = TxContext::random_for_testing_only();
+        let tx_context = TxContext::random_v1_for_testing_only();
         let expected_timelocks = (0..4)
             .map(|_| TimeLock::new(UID::new(ObjectID::random()), Balance::new(0), 0, None))
             .map(|timelock| {
@@ -531,7 +533,7 @@ mod tests {
     fn migration_objects_get_gas_coins() {
         let owner = IotaAddress::random_for_testing_only();
         let address = IotaAddress::random_for_testing_only();
-        let tx_context = TxContext::random_for_testing_only();
+        let tx_context = TxContext::random_v1_for_testing_only();
         let non_matching_timelocks = (0..8)
             .map(|_| TimeLock::new(UID::new(ObjectID::random()), Balance::new(0), 0, None))
             .map(|timelock| {

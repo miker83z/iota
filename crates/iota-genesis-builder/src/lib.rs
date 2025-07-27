@@ -34,7 +34,6 @@ use iota_types::{
     balance::{BALANCE_MODULE_NAME, Balance},
     base_types::{
         ExecutionDigests, IotaAddress, ObjectID, ObjectRef, SequenceNumber, TransactionDigest,
-        TxContext,
     },
     committee::Committee,
     crypto::{
@@ -70,6 +69,7 @@ use iota_types::{
         CallArg, CheckedInputObjects, Command, InputObjectKind, ObjectArg, ObjectReadResult,
         Transaction,
     },
+    tx_context::TxContext,
 };
 use move_binary_format::CompiledModule;
 use move_core_types::ident_str;
@@ -1022,6 +1022,7 @@ fn create_genesis_context(
     genesis_validators: &[GenesisValidatorMetadata],
     token_distribution_schedule: &TokenDistributionSchedule,
     system_packages: &[SystemPackage],
+    tx_context_v2: bool,
 ) -> TxContext {
     let mut hasher = DefaultHash::default();
     hasher.update(b"iota-genesis");
@@ -1035,13 +1036,24 @@ fn create_genesis_context(
     let hash = hasher.finalize();
     let genesis_transaction_digest = TransactionDigest::new(hash.into());
 
-    TxContext::new(
-        &IotaAddress::default(),
-        &genesis_transaction_digest,
-        epoch_data,
-        1,
-        None,
-    )
+    if tx_context_v2 {
+        TxContext::new(
+            &IotaAddress::default(),
+            &genesis_transaction_digest,
+            &epoch_data.epoch_id(),
+            epoch_data.epoch_start_timestamp(),
+            0,
+            0,
+            None,
+        )
+    } else {
+        TxContext::new_v1(
+            &IotaAddress::default(),
+            &genesis_transaction_digest,
+            &epoch_data.epoch_id(),
+            epoch_data.epoch_start_timestamp(),
+        )
+    }
 }
 
 fn build_unsigned_genesis_data<'info>(
@@ -1078,19 +1090,21 @@ fn build_unsigned_genesis_data<'info>(
     // certain tests.
     update_system_packages_from_objects(&mut system_packages, &objects);
 
+    let protocol_config = get_genesis_protocol_config(parameters.protocol_version);
+
     let mut genesis_ctx = create_genesis_context(
         &epoch_data,
         &genesis_chain_parameters,
         &genesis_validators,
         token_distribution_schedule,
         &system_packages,
+        protocol_config.tx_context_v2(),
     );
 
     // Use a throwaway metrics registry for genesis transaction execution.
     let registry = prometheus::Registry::new();
     let metrics = Arc::new(LimitsMetrics::new(&registry));
     let mut txs_data: TransactionsData = BTreeMap::new();
-    let protocol_config = get_genesis_protocol_config(parameters.protocol_version);
 
     // In here the main genesis objects are created. This means the main system
     // objects and the ones that are created at genesis like the network coin.

@@ -16,7 +16,7 @@ use iota_sdk::types::block::{
 use iota_types::{
     IOTA_FRAMEWORK_PACKAGE_ID, STARDUST_PACKAGE_ID, TypeTag,
     balance::Balance,
-    base_types::{IotaAddress, TxContext},
+    base_types::IotaAddress,
     coin::Coin,
     digests::TransactionDigest,
     epoch_data::EpochData,
@@ -25,6 +25,7 @@ use iota_types::{
     programmable_transaction_builder::ProgrammableTransactionBuilder,
     stardust::coin_type::CoinType,
     transaction::{Argument, CheckedInputObjects, ObjectArg},
+    tx_context::TxContext,
 };
 use move_binary_format::errors::VMError;
 use move_core_types::{ident_str, identifier::IdentStr, vm_status::StatusCode};
@@ -422,13 +423,14 @@ fn unlock_object(
 ) -> anyhow::Result<()> {
     let (migration_executor, objects_map) = run_migration(total_supply, outputs, coin_type)?;
 
+    let epoch = &EpochData::new(0, epoch_start_timestamp_ms, Default::default());
+
     // Recreate the TxContext and Executor so we can set a timestamp greater than 0.
-    let tx_context = TxContext::new(
+    let tx_context = TxContext::new_v1(
         sender,
         &TransactionDigest::new(random()),
-        &EpochData::new(0, epoch_start_timestamp_ms, Default::default()),
-        1,
-        None,
+        &epoch.epoch_id(),
+        epoch.epoch_start_timestamp(),
     );
     let store = InMemoryStorage::new(
         // Cloning all objects in the store includes the system packages we need for executing
