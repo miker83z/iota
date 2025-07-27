@@ -13,12 +13,13 @@ use iota_move::manage_package::resolve_lock_file_path;
 use iota_sdk::apis::ReadApi;
 use iota_types::{
     IOTA_FRAMEWORK_PACKAGE_ID, Identifier, TypeTag,
-    base_types::{ObjectID, TxContext, TxContextKind, is_primitive_type_tag},
+    base_types::{ObjectID, is_primitive_type_tag},
     move_package::MovePackage,
     object::Owner,
     programmable_transaction_builder::ProgrammableTransactionBuilder,
     resolve_address,
     transaction::{self as Tx, ObjectArg},
+    tx_context::{TxContext, TxContextKind},
 };
 use miette::Severity;
 use move_binary_format::{
