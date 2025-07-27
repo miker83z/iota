@@ -6,7 +6,7 @@ use std::{collections::HashSet, sync::Arc};
 
 use iota_protocol_config::ProtocolConfig;
 use iota_types::{
-    base_types::{IotaAddress, TxContext},
+    base_types::IotaAddress,
     committee::EpochId,
     digests::TransactionDigest,
     effects::TransactionEffects,
@@ -18,6 +18,7 @@ use iota_types::{
     metrics::LimitsMetrics,
     storage::BackingStore,
     transaction::{CheckedInputObjects, GasData, ProgrammableTransaction, TransactionKind},
+    tx_context::TxContext,
 };
 use move_trace_format::format::MoveTraceBuilder;
 

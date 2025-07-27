@@ -18,7 +18,7 @@ mod checked {
     use iota_protocol_config::ProtocolConfig;
     use iota_types::{
         balance::Balance,
-        base_types::{IotaAddress, MoveObjectType, ObjectID, TxContext},
+        base_types::{IotaAddress, MoveObjectType, ObjectID},
         coin::Coin,
         error::{ExecutionError, ExecutionErrorKind, command_argument_error},
         event::Event,
@@ -29,6 +29,7 @@ mod checked {
         object::{Data, MoveObject, Object, ObjectInner, Owner},
         storage::{BackingPackageStore, DenyListResult, PackageObject},
         transaction::{Argument, CallArg, ObjectArg},
+        tx_context::{TxContext, TxContextAPI},
     };
     use move_binary_format::{
         CompiledModule,

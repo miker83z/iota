@@ -18,8 +18,7 @@ mod checked {
         IOTA_FRAMEWORK_ADDRESS,
         base_types::{
             IotaAddress, MoveObjectType, ObjectID, RESOLVED_ASCII_STR, RESOLVED_STD_OPTION,
-            RESOLVED_UTF8_STR, TX_CONTEXT_MODULE_NAME, TX_CONTEXT_STRUCT_NAME, TxContext,
-            TxContextKind,
+            RESOLVED_UTF8_STR,
         },
         coin::Coin,
         error::{ExecutionError, ExecutionErrorKind, command_argument_error},
@@ -34,6 +33,10 @@ mod checked {
         storage::{PackageObject, get_package_objects},
         transaction::{Argument, Command, ProgrammableMoveCall, ProgrammableTransaction},
         transfer::RESOLVED_RECEIVING_STRUCT,
+        tx_context::{
+            TX_CONTEXT_MODULE_NAME, TX_CONTEXT_STRUCT_NAME, TxContext, TxContextAPI, TxContextKind,
+            TxContextV1, TxContextV2,
+        },
     };
     use iota_verifier::{
         INIT_FN_NAME,
@@ -884,7 +887,12 @@ mod checked {
             let Some((_, ctx_bytes, _)) = result.mutable_reference_outputs.pop() else {
                 invariant_violation!("Missing TxContext in reference outputs");
             };
-            let updated_ctx: TxContext = bcs::from_bytes(&ctx_bytes).map_err(|e| {
+            let updated_ctx = if context.protocol_config.tx_context_v2() {
+                bcs::from_bytes::<TxContextV2>(&ctx_bytes).map(TxContext::V2)
+            } else {
+                bcs::from_bytes::<TxContextV1>(&ctx_bytes).map(TxContext::V1)
+            }
+            .map_err(|e| {
                 ExecutionError::invariant_violation(format!(
                     "Unable to deserialize TxContext bytes. {e}"
                 ))

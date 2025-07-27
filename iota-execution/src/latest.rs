@@ -13,7 +13,7 @@ use iota_adapter_latest::{
 use iota_move_natives_latest::all_natives;
 use iota_protocol_config::ProtocolConfig;
 use iota_types::{
-    base_types::{IotaAddress, TxContext},
+    base_types::IotaAddress,
     committee::EpochId,
     digests::TransactionDigest,
     effects::TransactionEffects,
@@ -25,6 +25,7 @@ use iota_types::{
     metrics::{BytecodeVerifierMetrics, LimitsMetrics},
     storage::BackingStore,
     transaction::{CheckedInputObjects, GasData, ProgrammableTransaction, TransactionKind},
+    tx_context::TxContext,
 };
 use iota_verifier_latest::meter::IotaVerifierMeter;
 use move_binary_format::CompiledModule;

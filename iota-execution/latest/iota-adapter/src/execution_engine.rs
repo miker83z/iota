@@ -25,7 +25,7 @@ mod checked {
             BALANCE_CREATE_REWARDS_FUNCTION_NAME, BALANCE_DESTROY_REBATES_FUNCTION_NAME,
             BALANCE_MODULE_NAME,
         },
-        base_types::{IotaAddress, ObjectID, SequenceNumber, TransactionDigest, TxContext},
+        base_types::{IotaAddress, ObjectID, SequenceNumber, TransactionDigest},
         clock::{CLOCK_MODULE_NAME, CONSENSUS_COMMIT_PROLOGUE_FUNCTION_NAME},
         committee::EpochId,
         effects::TransactionEffects,
@@ -33,7 +33,7 @@ mod checked {
         execution::{ExecutionResults, ExecutionResultsV1, is_certificate_denied},
         execution_config_utils::to_binary_config,
         execution_status::{CongestedObjects, ExecutionStatus},
-        gas::{GasCostSummary, IotaGasStatus},
+        gas::{GasCostSummary, IotaGasStatus, IotaGasStatusAPI},
         gas_coin::GAS,
         inner_temporary_store::InnerTemporaryStore,
         iota_system_state::{
@@ -51,6 +51,7 @@ mod checked {
             GenesisTransaction, ObjectArg, ProgrammableTransaction, RandomnessStateUpdate,
             TransactionKind,
         },
+        tx_context::{TxContext, TxContextAPI},
     };
     use move_binary_format::CompiledModule;
     use move_trace_format::format::MoveTraceBuilder;
@@ -130,6 +131,7 @@ mod checked {
             }
         };
         let gas_price = gas_status.gas_price();
+        let gas_budget = gas_status.gas_budget();
         let mut gas_charger = GasCharger::new(
             transaction_digest,
             gas_data.payment,
@@ -137,14 +139,24 @@ mod checked {
             protocol_config,
         );
 
-        let mut tx_ctx = TxContext::new_from_components(
-            &transaction_signer,
-            &transaction_digest,
-            epoch_id,
-            epoch_timestamp_ms,
-            gas_price,
-            sponsor,
-        );
+        let mut tx_ctx = if protocol_config.tx_context_v2() {
+            TxContext::new(
+                &transaction_signer,
+                &transaction_digest,
+                epoch_id,
+                epoch_timestamp_ms,
+                gas_price,
+                gas_budget,
+                sponsor,
+            )
+        } else {
+            TxContext::new_v1(
+                &transaction_signer,
+                &transaction_digest,
+                epoch_id,
+                epoch_timestamp_ms,
+            )
+        };
 
         let is_epoch_change = transaction_kind.is_end_of_epoch_tx();
 

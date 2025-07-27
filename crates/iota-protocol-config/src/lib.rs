@@ -65,6 +65,7 @@ pub const MAX_PROTOCOL_VERSION: u64 = 10;
 //             Enable consensus garbage collection for mainnet with GC depth set
 //             to 60 rounds
 //             Enable batching in synchronizer for testnet
+//             Enable TxContextV2.
 #[derive(Copy, Clone, Debug, Hash, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ProtocolVersion(u64);
 
@@ -287,6 +288,10 @@ struct FeatureFlags {
     // If true, enabled batched block sync in consensus.
     #[serde(skip_serializing_if = "is_false")]
     consensus_batched_block_sync: bool,
+
+    // If true, enable TxContextV2.
+    #[serde(skip_serializing_if = "is_false")]
+    tx_context_v2: bool,
 }
 
 fn is_true(b: &bool) -> bool {
@@ -1263,6 +1268,10 @@ impl ProtocolConfig {
     pub fn consensus_batched_block_sync(&self) -> bool {
         self.feature_flags.consensus_batched_block_sync
     }
+
+    pub fn tx_context_v2(&self) -> bool {
+        self.feature_flags.tx_context_v2
+    }
 }
 
 #[cfg(not(msim))]
@@ -2046,6 +2055,8 @@ impl ProtocolConfig {
                         // Enable batched block sync in devnet and testnet.
                         cfg.feature_flags.consensus_batched_block_sync = true;
                     }
+
+                    cfg.feature_flags.tx_context_v2 = true;
                 }
                 // Use this template when making changes:
                 //
@@ -2196,6 +2207,10 @@ impl ProtocolConfig {
 
     pub fn set_consensus_batched_block_sync_for_testing(&mut self, val: bool) {
         self.feature_flags.consensus_batched_block_sync = val;
+    }
+
+    pub fn set_tx_context_v2_for_testing(&mut self, val: bool) {
+        self.feature_flags.tx_context_v2 = val;
     }
 }
 

@@ -22,9 +22,9 @@
 //! - it is never instantiated anywhere in its defining module
 use iota_types::{
     IOTA_FRAMEWORK_ADDRESS,
-    base_types::{TX_CONTEXT_MODULE_NAME, TX_CONTEXT_STRUCT_NAME},
     error::ExecutionError,
     move_package::{FnInfoMap, is_test_fun},
+    tx_context::{TX_CONTEXT_MODULE_NAME, TX_CONTEXT_STRUCT_NAME},
 };
 use move_binary_format::file_format::{
     Ability, AbilitySet, Bytecode, CompiledModule, DatatypeHandle, FunctionDefinition,

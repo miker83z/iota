@@ -4,13 +4,13 @@
 
 use iota_types::{
     IOTA_FRAMEWORK_ADDRESS,
-    base_types::{TX_CONTEXT_MODULE_NAME, TX_CONTEXT_STRUCT_NAME, TxContext, TxContextKind},
     clock::Clock,
     error::ExecutionError,
     is_object, is_object_vector, is_primitive,
     move_package::{FnInfoMap, is_test_fun},
     randomness_state::is_mutable_random,
     transfer::Receiving,
+    tx_context::{TX_CONTEXT_MODULE_NAME, TX_CONTEXT_STRUCT_NAME, TxContext, TxContextKind},
 };
 use move_binary_format::{
     CompiledModule,
