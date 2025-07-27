@@ -16,11 +16,12 @@ use super::{
 use crate::{
     IOTA_FRAMEWORK_ADDRESS,
     balance::Balance,
-    base_types::{IotaAddress, MoveObjectType, ObjectID, SequenceNumber, TxContext},
+    base_types::{IotaAddress, MoveObjectType, ObjectID, SequenceNumber},
     error::{ExecutionError, IotaError},
     gas_coin::GasCoin,
     id::UID,
     object::{Data, MoveObject, Object, Owner},
+    tx_context::{TxContext, TxContextAPI},
 };
 
 #[cfg(test)]

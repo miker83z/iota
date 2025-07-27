@@ -5,10 +5,11 @@ use iota_protocol_config::ProtocolConfig;
 use iota_stardust_sdk::types::block::output::{FoundryOutput, OutputId};
 
 use crate::{
-    base_types::{ObjectID, SequenceNumber, TxContext},
+    base_types::{ObjectID, SequenceNumber},
     id::UID,
     object::Object,
     stardust::{address::stardust_to_iota_address, coin_type::CoinType},
+    tx_context::TxContext,
 };
 
 pub fn create_foundry_amount_coin(

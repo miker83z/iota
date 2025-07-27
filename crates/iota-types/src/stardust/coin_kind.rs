@@ -53,7 +53,7 @@ mod tests {
 
     use crate::{
         balance::Balance,
-        base_types::{IotaAddress, ObjectID, TxContext},
+        base_types::{IotaAddress, ObjectID},
         id::UID,
         object::{Object, Owner},
         stardust::{
@@ -62,6 +62,7 @@ mod tests {
             output::{AliasOutput, BasicOutput, NftOutput},
         },
         timelock::timelock::{TimeLock, to_genesis_object},
+        tx_context::TxContext,
     };
 
     fn nft_output(balance: u64, coin_type: CoinType) -> anyhow::Result<Object> {
@@ -78,7 +79,7 @@ mod tests {
         output.to_genesis_object(
             IotaAddress::ZERO,
             &ProtocolConfig::get_for_min_version(),
-            &TxContext::random_for_testing_only(),
+            &TxContext::random_v1_for_testing_only(),
             1.into(),
             coin_type,
         )
@@ -109,7 +110,7 @@ mod tests {
         output.to_genesis_object(
             Owner::AddressOwner(IotaAddress::ZERO),
             &ProtocolConfig::get_for_min_version(),
-            &TxContext::random_for_testing_only(),
+            &TxContext::random_v1_for_testing_only(),
             1.into(),
             coin_type,
         )
@@ -146,7 +147,7 @@ mod tests {
         output.to_genesis_object(
             IotaAddress::ZERO,
             &ProtocolConfig::get_for_min_version(),
-            &TxContext::random_for_testing_only(),
+            &TxContext::random_v1_for_testing_only(),
             1.into(),
             &coin_type,
         )
@@ -177,7 +178,7 @@ mod tests {
             timelock,
             IotaAddress::ZERO,
             &ProtocolConfig::get_for_min_version(),
-            &TxContext::random_for_testing_only(),
+            &TxContext::random_v1_for_testing_only(),
             1.into(),
         )?)
     }

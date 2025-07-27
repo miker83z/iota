@@ -16,13 +16,14 @@ use super::unlock_conditions::{
 use crate::{
     STARDUST_ADDRESS, TypeTag,
     balance::Balance,
-    base_types::{IotaAddress, MoveObjectType, ObjectID, SequenceNumber, TxContext},
+    base_types::{IotaAddress, MoveObjectType, ObjectID, SequenceNumber},
     coin::Coin,
     collection_types::Bag,
     error::IotaError,
     id::UID,
     object::{Data, MoveObject, Object, Owner},
     stardust::{coin_type::CoinType, stardust_to_iota_address},
+    tx_context::{TxContext, TxContextAPI},
 };
 
 pub const BASIC_OUTPUT_MODULE_NAME: &IdentStr = ident_str!("basic_output");

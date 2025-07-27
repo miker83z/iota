@@ -108,12 +108,6 @@ pub mod checked {
                 Self::V1(status) => status.check_gas_balance(gas_objs, gas_budget),
             }
         }
-
-        pub fn gas_price(&self) -> u64 {
-            match self {
-                Self::V1(status) => status.gas_price(),
-            }
-        }
     }
 
     /// Summary of the charges in a transaction.
