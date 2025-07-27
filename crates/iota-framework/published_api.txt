@@ -1180,6 +1180,15 @@ epoch
 epoch_timestamp_ms
 	public fun
 	0x2::tx_context
+gas_price
+	public fun
+	0x2::tx_context
+gas_budget
+	public fun
+	0x2::tx_context
+sponsor
+	public fun
+	0x2::tx_context
 fresh_object_address
 	public fun
 	0x2::tx_context

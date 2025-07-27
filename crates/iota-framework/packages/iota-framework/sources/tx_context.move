@@ -31,6 +31,12 @@ public struct TxContext has drop {
     /// Counter recording the number of fresh id's created while executing
     /// this transaction. Always 0 at the start of a transaction
     ids_created: u64,
+    // Gas price passed to transaction as input
+    gas_price: u64,
+    // Gas budget passed to transaction as input
+    gas_budget: u64,
+    // Address of the sponsor, if any
+    sponsor: Option<address>,
 }
 
 /// Return the address of the user that signed the current
@@ -53,6 +59,21 @@ public fun epoch(self: &TxContext): u64 {
 /// Return the epoch start time as a unix timestamp in milliseconds.
 public fun epoch_timestamp_ms(self: &TxContext): u64 {
     self.epoch_timestamp_ms
+}
+
+/// Return the transaction gas price.
+public fun gas_price(self: &TxContext): u64 {
+    self.gas_price
+}
+
+/// Return the transaction gas budget.
+public fun gas_budget(self: &TxContext): u64 {
+    self.gas_budget
+}
+
+/// Return the `address` of the transaction sponsor or `None` if there was no sponsor.
+public fun sponsor(self: &TxContext): Option<address> {
+    self.sponsor
 }
 
 /// Create an `address` that has not been used. As it is an object address, it will never
@@ -85,9 +106,21 @@ public fun new(
     epoch: u64,
     epoch_timestamp_ms: u64,
     ids_created: u64,
+    gas_price: u64,
+    gas_budget: u64,
+    sponsor: Option<address>,
 ): TxContext {
     assert!(tx_hash.length() == TX_HASH_LENGTH, EBadTxHashLength);
-    TxContext { sender, tx_hash, epoch, epoch_timestamp_ms, ids_created }
+    TxContext {
+        sender,
+        tx_hash,
+        epoch,
+        epoch_timestamp_ms,
+        ids_created,
+        gas_price,
+        gas_budget,
+        sponsor,
+    }
 }
 
 #[test_only]
@@ -99,14 +132,23 @@ public fun new_from_hint(
     epoch_timestamp_ms: u64,
     ids_created: u64,
 ): TxContext {
-    new(addr, dummy_tx_hash_with_hint(hint), epoch, epoch_timestamp_ms, ids_created)
+    new(
+        addr,
+        dummy_tx_hash_with_hint(hint),
+        epoch,
+        epoch_timestamp_ms,
+        ids_created,
+        1,
+        1_000_000,
+        option::none(),
+    )
 }
 
 #[test_only]
 /// Create a dummy `TxContext` for testing
 public fun dummy(): TxContext {
     let tx_hash = x"3a985da74fe225b2045c172d6bd390bd855f086e3e9d525b46bfe24511431532";
-    new(@0x0, tx_hash, 0, 0, 0)
+    new(@0x0, tx_hash, 0, 0, 0, 0, 0, option::none())
 }
 
 #[test_only]

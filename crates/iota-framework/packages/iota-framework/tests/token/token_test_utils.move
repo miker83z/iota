@@ -15,7 +15,7 @@ public struct TEST has drop {}
 /// Get a context for testing.
 public fun ctx(sender: address): TxContext {
     let tx_hash = x"3a985da74fe225b2045c172d6bd390bd855f086e3e9d525b46bfe24511431532";
-    tx_context::new(sender, tx_hash, 0, 0, 0)
+    tx_context::new(sender, tx_hash, 0, 0, 0, 0, 0, option::none())
 }
 
 /// Get `TreasuryCap` for the TEST token.
