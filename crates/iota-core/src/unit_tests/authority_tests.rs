@@ -35,6 +35,7 @@ use iota_types::{
     programmable_transaction_builder::ProgrammableTransactionBuilder,
     randomness_state::get_randomness_state_obj_initial_shared_version,
     supported_protocol_versions::SupportedProtocolVersions,
+    tx_context::{TxContext, TxContextAPI},
     utils::{to_sender_signed_transaction, to_sender_signed_transaction_with_multi_signers},
 };
 use move_binary_format::{
@@ -1691,21 +1692,25 @@ async fn test_publish_dependent_module_ok() {
 
     let authority = init_state_with_objects(vec![gas_payment_object]).await;
     let rgp = authority.reference_gas_price_for_testing().unwrap();
+    let gas_budget = rgp * TEST_ONLY_GAS_UNIT_FOR_PUBLISH;
     let data = TransactionData::new_module(
         sender,
         gas_payment_object_ref,
         vec![dependent_module_bytes],
         vec![ObjectID::from(*genesis_module.address())],
-        rgp * TEST_ONLY_GAS_UNIT_FOR_PUBLISH,
+        gas_budget,
         rgp,
     );
     let transaction = to_sender_signed_transaction(data, &sender_key);
+    let epoch_data = &EpochData::new_test();
 
     let dependent_module_id = TxContext::new(
         &sender,
         transaction.digest(),
-        &EpochData::new_test(),
+        &epoch_data.epoch_id(),
+        epoch_data.epoch_start_timestamp(),
         rgp,
+        gas_budget,
         None,
     )
     .fresh_id();
@@ -1728,6 +1733,7 @@ async fn test_publish_module_no_dependencies_ok() {
     let (sender, sender_key): (_, AccountKeyPair) = get_key_pair();
     let authority = init_state_with_objects(vec![]).await;
     let rgp = authority.reference_gas_price_for_testing().unwrap();
+    let gas_budget = rgp * TEST_ONLY_GAS_UNIT_FOR_PUBLISH;
     let gas_payment_object_id = ObjectID::random();
     // Use the max budget to avoid running out of gas.
     let gas_balance = {
@@ -1752,15 +1758,18 @@ async fn test_publish_module_no_dependencies_ok() {
         gas_payment_object_ref,
         module_bytes,
         dependencies,
-        rgp * TEST_ONLY_GAS_UNIT_FOR_PUBLISH,
+        gas_budget,
         rgp,
     );
     let transaction = to_sender_signed_transaction(data, &sender_key);
+    let epoch_data = &EpochData::new_test();
     let _module_object_id = TxContext::new(
         &sender,
         transaction.digest(),
-        &EpochData::new_test(),
+        &epoch_data.epoch_id(),
+        epoch_data.epoch_start_timestamp(),
         rgp,
+        gas_budget,
         None,
     )
     .fresh_id();
