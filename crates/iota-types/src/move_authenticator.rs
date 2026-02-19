@@ -147,7 +147,8 @@ impl AuthenticatorTrait for MoveAuthenticator {
 /// [SenderSignerData](crate::transaction::SenderSignedData).
 impl Hash for MoveAuthenticator {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.as_ref().hash(state);
+        SignatureScheme::MoveAuthenticator.flag().hash(state);
+        self.inner.hash(state);
     }
 }
 
@@ -169,7 +170,7 @@ impl ToFromBytes for MoveAuthenticator {
 impl AsRef<[u8]> for MoveAuthenticator {
     fn as_ref(&self) -> &[u8] {
         self.bytes.get_or_init(|| {
-            let as_bytes = bcs::to_bytes(self).expect("BCS serialization should not fail");
+            let as_bytes = self.inner.to_vec();
             let mut bytes = Vec::with_capacity(1 + as_bytes.len());
             bytes.push(SignatureScheme::MoveAuthenticator.flag());
             bytes.extend_from_slice(as_bytes.as_slice());
@@ -196,6 +197,7 @@ impl Eq for MoveAuthenticator {}
 #[derive(Debug, Clone, JsonSchema, Serialize, Deserialize)]
 pub enum MoveAuthenticatorKind {
     V1(MoveAuthenticatorV1),
+    V2(MoveAuthenticatorV2),
 }
 
 impl MoveAuthenticatorKind {
@@ -214,30 +216,35 @@ impl MoveAuthenticatorKind {
     pub fn version(&self) -> u64 {
         match self {
             MoveAuthenticatorKind::V1(_) => 1,
+            MoveAuthenticatorKind::V2(_) => 2,
         }
     }
 
     pub fn address(&self) -> IotaResult<IotaAddress> {
         match self {
             MoveAuthenticatorKind::V1(v1) => v1.address(),
+            MoveAuthenticatorKind::V2(v2) => v2.address(),
         }
     }
 
     pub fn call_args(&self) -> &Vec<CallArg> {
         match self {
             MoveAuthenticatorKind::V1(v1) => v1.call_args(),
+            MoveAuthenticatorKind::V2(v2) => v2.call_args(),
         }
     }
 
     pub fn type_arguments(&self) -> &Vec<TypeInput> {
         match self {
             MoveAuthenticatorKind::V1(v1) => v1.type_arguments(),
+            MoveAuthenticatorKind::V2(v2) => v2.type_arguments(),
         }
     }
 
     pub fn object_to_authenticate(&self) -> &CallArg {
         match self {
             MoveAuthenticatorKind::V1(v1) => v1.object_to_authenticate(),
+            MoveAuthenticatorKind::V2(v2) => v2.object_to_authenticate(),
         }
     }
 
@@ -246,30 +253,51 @@ impl MoveAuthenticatorKind {
     ) -> UserInputResult<(ObjectID, Option<SequenceNumber>, Option<ObjectDigest>)> {
         match self {
             MoveAuthenticatorKind::V1(v1) => v1.object_to_authenticate_components(),
+            MoveAuthenticatorKind::V2(v2) => v2.object_to_authenticate_components(),
         }
     }
 
     pub fn input_objects(&self) -> Vec<InputObjectKind> {
         match self {
             MoveAuthenticatorKind::V1(v1) => v1.input_objects(),
+            MoveAuthenticatorKind::V2(v2) => v2.input_objects(),
         }
     }
 
     pub fn receiving_objects(&self) -> Vec<ObjectRef> {
         match self {
             MoveAuthenticatorKind::V1(v1) => v1.receiving_objects(),
+            MoveAuthenticatorKind::V2(v2) => v2.receiving_objects(),
         }
     }
 
     pub fn shared_objects(&self) -> Vec<SharedInputObject> {
         match self {
             MoveAuthenticatorKind::V1(v1) => v1.shared_objects(),
+            MoveAuthenticatorKind::V2(v2) => v2.shared_objects(),
         }
     }
 
     pub fn validity_check(&self, config: &ProtocolConfig) -> UserInputResult {
         match self {
             MoveAuthenticatorKind::V1(v1) => v1.validity_check(config),
+            MoveAuthenticatorKind::V2(v2) => v2.validity_check(config),
+        }
+    }
+
+    pub fn to_vec(&self) -> Vec<u8> {
+        match self {
+            MoveAuthenticatorKind::V1(v1) => v1.to_vec(),
+            MoveAuthenticatorKind::V2(v2) => v2.to_vec(),
+        }
+    }
+}
+
+impl Hash for MoveAuthenticatorKind {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            MoveAuthenticatorKind::V1(v1) => v1.hash(state),
+            MoveAuthenticatorKind::V2(v2) => v2.hash(state),
         }
     }
 }
@@ -437,9 +465,247 @@ impl MoveAuthenticatorV1 {
 
         Ok(())
     }
+
+    pub fn to_vec(&self) -> Vec<u8> {
+        bcs::to_bytes(self).unwrap()
+    }
 }
 
 impl AuthenticatorTrait for MoveAuthenticatorV1 {
+    fn verify_user_authenticator_epoch(
+        &self,
+        _epoch: EpochId,
+        _max_epoch_upper_bound_delta: Option<u64>,
+    ) -> IotaResult {
+        Ok(())
+    }
+    // This function accepts all inputs, as signature verification is performed
+    // later on the Move side.
+    fn verify_claims<T>(
+        &self,
+        _value: &IntentMessage<T>,
+        author: IotaAddress,
+        _aux_verify_data: &VerifyParams,
+        _zklogin_inputs_cache: Arc<VerifiedDigestCache<ZKLoginInputsDigest>>,
+    ) -> IotaResult
+    where
+        T: Serialize,
+    {
+        if author != self.address()? {
+            return Err(IotaError::InvalidSignature {
+                error: "Invalid author".to_string(),
+            });
+        };
+
+        Ok(())
+    }
+}
+
+impl Hash for MoveAuthenticatorV1 {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        bcs::to_bytes(self)
+            .expect("BCS serialization should not fail")
+            .hash(state);
+    }
+}
+
+/// MoveAuthenticatorV2 is the second version of MoveAuthenticator.
+#[derive(Debug, Clone, JsonSchema, Serialize, Deserialize)]
+pub struct MoveAuthenticatorV2 {
+    /// Input objects or primitive values
+    call_args: Vec<CallArg>,
+    /// Type arguments for the Move authenticate function
+    #[schemars(with = "Vec<String>")]
+    type_arguments: Vec<TypeInput>,
+    /// The object that is authenticated. Represents the account being the
+    /// sender of the transaction.
+    object_to_authenticate: CallArg,
+    /// An optional proof that can be used by the Move code to verify the
+    /// authenticity of the MoveAuthenticatorV2. This field is not used by the
+    /// protocol, but can be used by the Move code to implement additional
+    /// security checks.
+    proof: Option<Vec<u8>>,
+}
+
+impl MoveAuthenticatorV2 {
+    pub fn new(
+        call_args: Vec<CallArg>,
+        type_arguments: Vec<TypeInput>,
+        object_to_authenticate: CallArg,
+        proof: Option<Vec<u8>>,
+    ) -> Self {
+        Self {
+            call_args,
+            type_arguments,
+            object_to_authenticate,
+            proof,
+        }
+    }
+
+    /// Returns the address of the MoveAuthenticatorV2, which is derived from
+    /// the object to authenticate.
+    pub fn address(&self) -> IotaResult<IotaAddress> {
+        let (id, _, _) = self.object_to_authenticate_components()?;
+        Ok(IotaAddress::from(id))
+    }
+
+    pub fn call_args(&self) -> &Vec<CallArg> {
+        &self.call_args
+    }
+
+    pub fn type_arguments(&self) -> &Vec<TypeInput> {
+        &self.type_arguments
+    }
+
+    pub fn object_to_authenticate(&self) -> &CallArg {
+        &self.object_to_authenticate
+    }
+
+    pub fn object_to_authenticate_components(
+        &self,
+    ) -> UserInputResult<(ObjectID, Option<SequenceNumber>, Option<ObjectDigest>)> {
+        Ok(match self.object_to_authenticate() {
+            CallArg::Pure(_) => {
+                return Err(UserInputError::Unsupported(
+                    "MoveAuthenticatorV2 cannot authenticate pure inputs".to_string(),
+                ));
+            }
+            CallArg::Object(object_arg) => match object_arg {
+                ObjectArg::ImmOrOwnedObject((id, sequence_number, digest)) => {
+                    (*id, Some(*sequence_number), Some(*digest))
+                }
+                ObjectArg::SharedObject { id, mutable, .. } => {
+                    if *mutable {
+                        return Err(UserInputError::Unsupported(
+                            "MoveAuthenticatorV2 cannot authenticate mutable shared objects"
+                                .to_string(),
+                        ));
+                    }
+
+                    (*id, None, None)
+                }
+                ObjectArg::Receiving(_) => {
+                    return Err(UserInputError::Unsupported(
+                        "MoveAuthenticatorV2 cannot authenticate receiving objects".to_string(),
+                    ));
+                }
+            },
+        })
+    }
+
+    /// Returns all input objects used by the MoveAuthenticatorV2,
+    /// including those from the object to authenticate.
+    pub fn input_objects(&self) -> Vec<InputObjectKind> {
+        self.call_args
+            .iter()
+            .flat_map(|arg| arg.input_objects())
+            .chain(self.object_to_authenticate().input_objects())
+            .collect::<Vec<_>>()
+    }
+
+    pub fn receiving_objects(&self) -> Vec<ObjectRef> {
+        self.call_args
+            .iter()
+            .flat_map(|arg| arg.receiving_objects())
+            .collect()
+    }
+
+    /// Returns all shared input objects used by the MoveAuthenticatorV2,
+    /// including those from the object to authenticate.
+    pub fn shared_objects(&self) -> Vec<SharedInputObject> {
+        self.call_args
+            .iter()
+            .flat_map(|arg| arg.shared_objects())
+            .chain(self.object_to_authenticate().shared_objects())
+            .collect()
+    }
+
+    /// Validity check for MoveAuthenticatorV2.
+    pub fn validity_check(&self, config: &ProtocolConfig) -> UserInputResult {
+        // Check that the object to authenticate is valid.
+        self.object_to_authenticate_components()?;
+
+        // Inputs validity check.
+        //
+        // `validity_check` is not called for `object_to_authenticate` because it is
+        // already validated with a dedicated function.
+
+        // `ProtocolConfig::max_function_parameters` is used to check the call arguments
+        // because MoveAuthenticatorV2 is considered as a simple programmable call to a
+        // Move function.
+        //
+        // The limit includes the object to authenticate, the auth context and the tx
+        // context, so we subtract 3 here.
+        let max_args = (config.max_function_parameters() - 3) as usize;
+        fp_ensure!(
+            self.call_args().len() < max_args,
+            UserInputError::SizeLimitExceeded {
+                limit: "maximum arguments in MoveAuthenticatorV2".to_string(),
+                value: max_args.to_string()
+            }
+        );
+
+        fp_ensure!(
+            self.receiving_objects().is_empty(),
+            UserInputError::Unsupported(
+                "MoveAuthenticatorV2 cannot have receiving objects as input".to_string(),
+            )
+        );
+
+        let mut used = HashSet::new();
+        fp_ensure!(
+            self.input_objects()
+                .iter()
+                .all(|o| used.insert(o.object_id())),
+            UserInputError::DuplicateObjectRefInput
+        );
+
+        self.call_args()
+            .iter()
+            .try_for_each(|obj| obj.validity_check(config))?;
+
+        // Type arguments validity check.
+        //
+        // Each type argument is checked for validity in the same way as it is done for
+        // `ProgrammableMoveCall`.
+        let mut type_arguments_count = 0;
+        self.type_arguments().iter().try_for_each(|type_arg| {
+            crate::transaction::type_input_validity_check(
+                type_arg,
+                config,
+                &mut type_arguments_count,
+            )
+        })?;
+
+        Ok(())
+    }
+
+    pub fn to_vec(&self) -> Vec<u8> {
+        bcs::to_bytes(self).unwrap()
+    }
+}
+
+/// Exclude `proof` from hashing so that the hash reflects only the fields that
+/// identify the authenticator's intent, not the attached proof bytes.
+impl Hash for MoveAuthenticatorV2 {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        #[derive(Serialize)]
+        struct MoveAuthenticatorV2Hash<'a> {
+            call_args: &'a Vec<CallArg>,
+            type_arguments: &'a Vec<TypeInput>,
+            object_to_authenticate: &'a CallArg,
+        }
+        bcs::to_bytes(&MoveAuthenticatorV2Hash {
+            call_args: &self.call_args,
+            type_arguments: &self.type_arguments,
+            object_to_authenticate: &self.object_to_authenticate,
+        })
+        .expect("BCS serialization should not fail")
+        .hash(state);
+    }
+}
+
+impl AuthenticatorTrait for MoveAuthenticatorV2 {
     fn verify_user_authenticator_epoch(
         &self,
         _epoch: EpochId,
